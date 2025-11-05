@@ -10,11 +10,11 @@ Ce TP a pour objectif de mettre en pratique les concepts de traitement de flux d
 ### Spécifications Techniques
 - **Entrée** : Messages texte bruts dans le topic `text-input`
 - **Traitements** :
-  - Nettoyage du texte (trim, espaces multiples, majuscules)
-  - Filtrage selon des règles métier
+    - Nettoyage du texte (trim, espaces multiples, majuscules)
+    - Filtrage selon des règles métier
 - **Sorties** :
-  - Messages valides → `text-clean`
-  - Messages invalides → `text-dead-letter`
+    - Messages valides → `text-clean`
+    - Messages invalides → `text-dead-letter`
 
 ### Résultats et Validation
 
@@ -31,19 +31,19 @@ Ce TP a pour objectif de mettre en pratique les concepts de traitement de flux d
 Le traitement se décompose en plusieurs étapes clés :
 1. **Lecture** depuis `text-input`
 2. **Transformation** :
-   - Suppression des espaces superflus
-   - Conversion en majuscules
+    - Suppression des espaces superflus
+    - Conversion en majuscules
 3. **Filtrage** :
-   - Rejet des messages vides
-   - Filtrage des mots interdits
-   - Validation de la longueur
+    - Rejet des messages vides
+    - Filtrage des mots interdits
+    - Validation de la longueur
 4. **Routage** vers les topics appropriés
 
 #### 3. Points d'Extension
 - Gestion des erreurs
 - Tests unitaires
 - Monitoring des métriques
-station,temperature,humidity
+  station,temperature,humidity
 - station : L'identifiant de la station (par exemple, Station1, Station2, etc.).
 - temperature : La température mesurée (en °C, par exemple, 25.3).
 - humidity : Le pourcentage d'humidité (par exemple, 60).
