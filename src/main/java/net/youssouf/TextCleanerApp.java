@@ -36,17 +36,13 @@ public class TextCleanerApp {
             KStream<String, String> textStream = builder.stream(INPUT_TOPIC);
             
             // Traitement du texte
-            textStream
-                // Nettoyage du texte
-                .mapValues(value -> cleanText(value))
-                // Filtrage et routage
-                .filter((key, value) -> isValidMessage(value))
-                .to(CLEAN_TOPIC);
-                
-            // Messages invalides vers dead-letter
-            textStream
-                .filter((key, value) -> !isValidMessage(cleanText(value)))
-                .to(DEAD_LETTER_TOPIC);
+            KStream<String, String> cleaned = textStream.mapValues(TextCleanerApp::cleanText);
+
+            cleaned.filter((k,v) -> isValidMessage(v))
+                   .to(CLEAN_TOPIC);
+
+            cleaned.filter((k,v) -> !isValidMessage(v))
+                   .to(DEAD_LETTER_TOPIC);
             
             // Démarrage de l'application
             KafkaStreams streams = new KafkaStreams(builder.build(), props);

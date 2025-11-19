@@ -1,131 +1,320 @@
-# TP Kafka Streams - Traitement de Flux de Données en Temps Réel
+#  TP Kafka Streams — Traitement de Flux de Données en Temps Réel
 
-## Introduction
-Ce TP a pour objectif de mettre en pratique les concepts de traitement de flux de données en temps réel avec Kafka Streams. Nous allons implémenter trois exercices progressifs pour maîtriser les différentes fonctionnalités de Kafka Streams.
+**Big Data Processing — 2025**
+**Auteur : TANGARA Youssouf**
+**Encadrant : Mr. Abdelmajid BOUSSELHAM**
 
-## Exercice 1 : Traitement de Texte avec Filtrage
+---
 
-### Objectif
+# Présentation du TP
 
-### Spécifications Techniques
-- **Entrée** : Messages texte bruts dans le topic `text-input`
-- **Traitements** :
-    - Nettoyage du texte (trim, espaces multiples, majuscules)
-    - Filtrage selon des règles métier
-- **Sorties** :
-    - Messages valides → `text-clean`
-    - Messages invalides → `text-dead-letter`
+Ce projet regroupe **3 exercices complets** permettant de maîtriser Kafka et Kafka Streams à travers des cas concrets :
 
-### Résultats et Validation
+1. **Traitement et Nettoyage de Texte (Kafka Streams)**
+2. **Analyse de Données Météorologiques**
+3. **Application Spring Boot + Kafka Streams — Compteur de Clics**
 
-#### Scénarios de Test
-| Message d'entrée | Sortie attendue |
-|------------------|-----------------|
-| "  hello  world  " | "HELLO WORLD" (text-clean) |
-| "" | (text-dead-letter) |
-| "This is a HACK" | (text-dead-letter) |
-| "  multiple    spaces   " | "MULTIPLE SPACES" (text-clean) |
-| "X" * 101 | (text-dead-letter) |
+Ce dépôt inclut également la configuration Kafka via Docker afin de faciliter l’exécution des exercices.
 
-#### Comment tester l'application
-Le traitement se décompose en plusieurs étapes clés :
+---
+
+# 🧰 Prérequis
+
+Avant de commencer, veuillez installer :
+
+* **Docker + Docker Compose**
+* **Java 17 ou 21**
+* **Maven 3.9+**
+* **IDE** : IntelliJ / VS Code / Eclipse
+* **Git**
+
+---
+
+# 🏗️ Démarrage de Kafka via Docker
+
+### 1. Lancer le cluster Kafka
+
+Dans le répertoire `cluster-kafka/` :
+
+```bash
+docker-compose up -d
+```
+
+Vérifier que le broker est démarré :
+
+```bash
+docker ps
+```
+
+---
+
+### 2. Accéder au conteneur Kafka
+
+```bash
+docker exec -it brokerkafka sh
+```
+
+Une fois dans le conteneur :
+
+```bash
+cd /opt/kafka/bin/
+```
+
+📌 *Toutes les commandes CLI sont à exécuter dans ce dossier.*
+
+![conteneur creation](/captures/img.png)
+---
+
+# 📘 Exercice 1 — Traitement de Texte avec Kafka Streams
+
+## 🎯 Objectif
+
+Développer une application Kafka Streams capable de :
+
+* Nettoyer des messages texte
+* Supprimer les mots interdits
+* Gestion via Dead Letter Queue
+* Rediriger le texte filtré dans deux topics :
+
+    * `text-clean`
+    * `text-dead-letter`
+
+---
+
+# 1️⃣ Création des Topics
+
+### Commandes à exécuter dans le conteneur Kafka :
+
+```bash
+./kafka-topics.sh --create --topic text-input --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+./kafka-topics.sh --create --topic text-clean --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+./kafka-topics.sh --create --topic text-dead-letter --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+```
+
+### Vérification des topics créés :
+
+```bash
+./kafka-topics.sh --list --bootstrap-server localhost:9092
+```
+
+📷 *Capture : Liste des topics*
+![Liste des topics](/captures/img_1.png)
+
+---
+
+# 2️⃣ Test Manuel : Producer & Consumer
+
+### Produire sur `text-input` :
+
+```bash
+./kafka-console-producer.sh --topic text-input --bootstrap-server localhost:9092
+```
+
+### Consommer :
+
+```bash
+./kafka-console-consumer.sh --topic text-input --bootstrap-server localhost:9092 --from-beginning
+```
+
+📷 *Capture : Test Producer/Consumer*
+![Test Producer Consumer](/captures/img_2.png)
+
+---
+
+# 3️⃣ Lancement de l’Application Kafka Streams
+
+Le projet contient une classe Java :
+
+```
+TextCleanerApp.java
+```
+
+Elle :
+
+* crée automatiquement les topics (si absents)
+* nettoie les messages
+* applique les règles métier
+* redirige vers les bons topics
+
+### Lancer l'application :
+
+```bash
+mvn clean package
+java -jar target/kafka-text-cleaner.jar
+```
+
+📷 *Capture : démarrage de l'application*
+![Start App](/captures/img_3.png)
+
+---
+
+# 4️⃣ Résultats : Tests Fonctionnels
+
+Après production de messages → observation des topics :
+📷 *Capture : résultats text-clean & dead-letter*
+![App Results](/captures/img_4.png)
+
+---
+
+#  Scénarios de Test comme sur la capture
+
+| Message d’entrée            | Sortie attendue                    |
+| --------------------------- | ---------------------------------- |
+| `"  hello  world  "`        | `"HELLO WORLD"` → `text-clean`     |
+| `""`                        | → `text-dead-letter`               |
+| `"This is a HACK"`          | → `text-dead-letter`               |
+| `"  multiple    spaces   "` | `"MULTIPLE SPACES"` → `text-clean` |
+| message > 100 caractères    | → `text-dead-letter`               |
+
+---
+
+# 🧠 Fonctionnement Global
+
 1. **Lecture** depuis `text-input`
-2. **Transformation** :
-    - Suppression des espaces superflus
-    - Conversion en majuscules
-3. **Filtrage** :
-    - Rejet des messages vides
-    - Filtrage des mots interdits
-    - Validation de la longueur
-4. **Routage** vers les topics appropriés
+2. **Nettoyage** : trim + espaces + majuscules
+3. **Validation** selon règles :
 
-#### 3. Points d'Extension
-- Gestion des erreurs
-- Tests unitaires
-- Monitoring des métriques
+    * pas vide
+    * pas de mots interdits
+    * long ≤ 100
+4. **Routage** vers :
+
+    * `text-clean`
+    * `text-dead-letter`
+
+---
+
+---
+
+# 📘 Exercice 2 — Analyse de Données Météorologiques
+
+*(Squelette prêt à remplir lorsque tu feras l’exercice)*
+
+## 🎯 Objectif
+
+Créer une application Kafka Streams pour analyser des relevés météo temps réel.
+
+## 🔧 Spécifications
+
+* Topic d'entrée : `weather-data`
+* Format :
+
+  ```
   station,temperature,humidity
-- station : L'identifiant de la station (par exemple, Station1, Station2, etc.).
-- temperature : La température mesurée (en °C, par exemple, 25.3).
-- humidity : Le pourcentage d'humidité (par exemple, 60).
+  ```
+* Étapes attendues :
 
-Vous devez créer une application Kafka Streams pour effectuer les transformations suivantes
-:
-1. Lire les données météorologiques : Lisez les messages depuis le topic Kafka 'weather-data'
-   en utilisant un flux (KStream).
-2. Filtrer les données de température élevée
-- Ne conservez que les relevés où la température est supérieure à 30°C.
-- Exemple :
-- Input : Station1,25.3,60 | Station2,35.0,50
-- Output : Station2,35.0,50
-3. Convertir les températures en Fahrenheit
-- Convertissez les températures mesurées en degrés Celsius (°C) en Fahrenheit (°F) avec la
-  formule :
-  Fahrenheit = (Celsius * 9/5) + 32
-- Exemple :
-- Input : Station2,35.0,50
-- Output : Station2,95.0,50
-4. Grouper les données par station
-- Regroupez les relevés par station (station).
-- Calculez la température moyenne et le taux d'humidité moyen pour chaque station.
+    1. Lire les données → `KStream`
+    2. Filtrer température > 30°C
+    3. Convertir température en Fahrenheit
+    4. Grouper par station
+    5. Calculer moyennes (temp & humidité)
+    6. Publier dans `station-averages`
 
-Big Data Processing 2025
+## ➕ À implémenter
 
-Mr. Abdelmajid BOUSSELHAM 3
-- Exemple :
-- Input : Station2,95.0,50 | Station2,98.6,40
-- Output : Station2,96.8,45
-5. Écrire les résultats
-   Publiez les résultats agrégés dans un nouveau topic Kafka nommé 'station-averages'.
-   Contraintes
-- Utilisez les concepts de KStream, KTable, et KGroupedStream.
-- Gérer les données en assurant une sérialisation correcte.
-- Assurez un arrêt propre de l'application en ajoutant un hook.
-  Objectif
-  À la fin de l'exercice, votre application Kafka Streams doit :
-1. Lire les données météo depuis le topic 'weather-data'.
-2. Filtrer et transformer les relevés météorologiques.
+* Sérialisation personnalisée
+* KGroupedStream + Aggregation
+* Hook d’arrêt
 
-3. Publier les moyennes de température et d'humidité par station dans le topic 'station-
-   averages'.
+## 📌 Exemple attendu
 
-Exemple de Résultat
-Données dans le topic weather-data :
+Input :
+
+```
 Station1,25.3,60
 Station2,35.0,50
 Station2,40.0,45
-Station1,32.0,70
-Données publiées dans le topic station-averages :
-Station2 : Température Moyenne = 37.5°F, Humidité Moyenne = 47.5%
-Station1 : Température Moyenne = 31.65°F, Humidité Moyenne = 65%
-Exercice 3 : Calcul du nombre de clics avec Kafka Streams et Spring Boot
-Dans cet exercice, vous allez développer une solution complète basée sur Kafka Streams et
-Spring Boot pour suivre et analyser les clics des utilisateurs en temps réel. Le but est de
-concevoir une application web où les utilisateurs peuvent cliquer sur un bouton, et chaque
-clic sera enregistré et comptabilisé. Les données de clics seront traitées en temps réel à l'aide
-de Kafka Streams, et les résultats seront exposés via une API REST. Ce projet vise à familiariser
+```
 
-Big Data Processing 2025
+Output :
 
-Mr. Abdelmajid BOUSSELHAM 4
-les étudiants avec le fonctionnement de Kafka, Kafka Streams, et leur intégration avec Spring
-Boot dans une architecture orientée événements.
+```
+Station2 : Température Moyenne = 37.5°F | Humidité Moyenne = 47.5%
+```
 
-• Producteur Web :
-• Développez une application web Spring Boot qui expose une interface simple
-contenant un bouton "Cliquez ici".
-• Chaque clic sur ce bouton doit envoyer un message à un cluster Kafka. Le message doit
-inclure une clé (par exemple, userId) pour identifier l'utilisateur et une valeur ("click")
-pour représenter l'action.
-• Configurez le producteur pour publier ces messages dans un topic Kafka nommé clicks.
-• Application Kafka Streams :
-• Créez une application Kafka Streams qui consomme les messages du topic clicks.
-• Implémentez un traitement pour compter dynamiquement le nombre total de clics
-(soit globalement, soit par utilisateur).
-• Configurez l'application pour produire les résultats dans un autre topic Kafka nommé
-click-counts.
+*(Tu ajouteras ton code + captures ici une fois terminé)*
 
-• Consommateur REST :
-• Développez une autre application Spring Boot qui consomme les données du topic
-Kafka click-counts.
-• Implémentez une API REST avec un endpoint (GET /clicks/count) qui retourne le nombre
-total de clics en temps réel.
+---
+
+# 📘 Exercice 3 — Application Spring Boot + Kafka Streams : Click Counter
+
+*(Squelette également)*
+
+## 🎯 Objectif
+
+Créer une mini-application Web/REST avec :
+
+* Un bouton qui envoie un “clic”
+* Kafka Streams qui compte les clics en temps réel
+* Une API REST qui expose les compteurs
+
+## 🔧 Architecture
+
+* **Frontend** → Envoie des clics
+* **Kafka Producer** → topic `click-events`
+* **Kafka Streams** → comptage `KTable`
+* **Topic output** : `click-counts`
+* **API REST Spring Boot** → expose `/stats`
+
+## 📌 Fonctionnalités à implémenter
+
+* Flux temps réel Kafka Streams
+* State Store (RocksDB)
+* REST Controller Spring
+* Web interface simple (optionnel)
+
+---
+
+# ▶️ Comment Lancer Tout le Projet
+
+### 1. Démarrer Kafka
+
+```bash
+docker-compose up -d
+```
+
+### 2. Compiler l’application Kafka Streams
+
+```bash
+mvn clean package
+```
+
+### 3. Lancer l’exo 1 / exo 2 / exo 3
+
+```bash
+java -jar target/<nom-app>.jar
+```
+
+### 4. Tester avec Producer / Consumer
+
+→ via commandes Kafka
+
+---
+
+# 📝 Notes Utile
+
+### Supprimer un topic
+
+```bash
+./kafka-topics.sh --delete --topic <topic> --bootstrap-server localhost:9092
+```
+
+---
+
+# 🎉 Conclusion
+
+Ce TP permet de manipuler Kafka & Kafka Streams dans des scénarios variés :
+✔ Nettoyage de texte
+✔ Traitement météorologique
+✔ Temps réel + API Spring Boot
+
+Tu peux maintenant compléter ton dépôt GitHub avec un README clair, professionnel, parfaitement structuré pour un projet académique ou portfolio.
+
+---
+
+Si tu veux :
+✅ Générer un PDF propre avec ce README
+✅ Ajouter des badges GitHub
+✅ Ajouter une architecture en diagrammes
+Je peux aussi te les préparer.
