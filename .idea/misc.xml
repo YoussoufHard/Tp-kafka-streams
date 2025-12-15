@@ -5,6 +5,9 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/pom.xml" />
+        <option value="$PROJECT_DIR$/ClickConsumerApp/pom.xml" />
+        <option value="$PROJECT_DIR$/ClickProducerApp/pom.xml" />
+        <option value="$PROJECT_DIR$/ClickStreamsApp/pom.xml" />
       </list>
     </option>
   </component>

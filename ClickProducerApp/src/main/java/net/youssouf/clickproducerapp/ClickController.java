@@ -1,24 +1,18 @@
-package net.youssouf;
+package net.youssouf.clickproducerapp;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 
-@SpringBootApplication
 @Controller
-public class ClickProducerApp {
+public class ClickController {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
+    private long clickCounter = 0;
 
-    public ClickProducerApp(KafkaTemplate<String, String> kafkaTemplate) {
+    public ClickController(KafkaTemplate<String, String> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
-    }
-
-    public static void main(String[] args) {
-        SpringApplication.run(ClickProducerApp.class, args);
     }
 
     @GetMapping("/")
@@ -28,7 +22,10 @@ public class ClickProducerApp {
 
     @PostMapping("/click")
     public String click() {
-        kafkaTemplate.send("clicks", "user1", "click");
+        // ✅ key = userId, value = numéro du clic
+        long clickId = ++clickCounter;
+        kafkaTemplate.send("clicks", "user1", String.valueOf(clickId));
+        System.out.println("CLICK ENVOYÉ - ID: " + clickId);
         return "redirect:/";
     }
 }

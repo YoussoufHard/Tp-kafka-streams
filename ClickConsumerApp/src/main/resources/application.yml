@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: ClickConsumerApp
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: click-consumer
+      auto-offset-reset: earliest
+server:
+  port: 8081
