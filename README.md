@@ -188,8 +188,6 @@ Après production de messages → observation des topics :
 
 # 📘 Exercice 2 — Analyse de Données Météorologiques
 
-*(Squelette prêt à remplir lorsque tu feras l’exercice)*
-
 ## 🎯 Objectif
 
 Créer une application Kafka Streams pour analyser des relevés météo temps réel.
@@ -211,15 +209,45 @@ Créer une application Kafka Streams pour analyser des relevés météo temps r�
     5. Calculer moyennes (temp & humidité)
     6. Publier dans `station-averages`
 
-## ➕ À implémenter
+## ➕ Implémentation
 
-* Sérialisation personnalisée
-* KGroupedStream + Aggregation
-* Hook d’arrêt
+Le code est dans `WeatherAnalyzerApp.java`.
 
-## 📌 Exemple attendu
+Il utilise Kafka Streams pour :
 
-Input :
+* Lire depuis `weather-data`
+* Parser les données CSV
+* Filtrer température > 30°C
+* Convertir en Fahrenheit
+* Grouper par station et calculer moyennes
+* Publier vers `station-averages`
+
+### Lancement
+
+```bash
+mvn clean package
+java -cp target/classes net.youssouf.WeatherAnalyzerApp
+```
+
+### Création des topics
+
+```bash
+./kafka-topics.sh --create --topic weather-data --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+./kafka-topics.sh --create --topic station-averages --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+```
+
+📷 *Capture : Topics météo*
+![Topics Météo](/captures/img_5.png)
+
+### Test
+
+Produire des données :
+
+```bash
+./kafka-console-producer.sh --topic weather-data --bootstrap-server localhost:9092
+```
+
+Entrer :
 
 ```
 Station1,25.3,60
@@ -227,13 +255,115 @@ Station2,35.0,50
 Station2,40.0,45
 ```
 
-Output :
+Consommer les résultats :
 
-```
-Station2 : Température Moyenne = 37.5°F | Humidité Moyenne = 47.5%
+```bash
+./kafka-console-consumer.sh --topic station-averages --bootstrap-server localhost:9092 --from-beginning
 ```
 
-*(Tu ajouteras ton code + captures ici une fois terminé)*
+📷 *Capture : Résultats météo exemple*
+![Résultats Météo](/captures/img_6.png)
+
+---
+
+## 📊 Monitoring avec Prometheus & Grafana
+
+### 🎯 Objectif
+
+Intégrer Prometheus et Grafana pour monitorer en temps réel l'application Kafka Streams, observer les métriques JMX, et visualiser les performances (débit, latence, utilisation CPU/Mémoire).
+
+### 🔧 Spécifications
+
+* Activer JMX dans l'application Java
+* Exposer les métriques via JMX Exporter
+* Collecter avec Prometheus
+* Visualiser avec Grafana
+
+### ➕ Implémentation
+
+L'application Kafka Streams intègre directement Prometheus pour exposer des métriques personnalisées (température et humidité moyennes par station) ainsi que les métriques JVM.
+
+#### Métriques exposées
+
+* `weather_avg_temperature_fahrenheit{station="..."}` : Température moyenne en Fahrenheit
+* `weather_avg_humidity{station="..."}` : Humidité moyenne en pourcentage
+* Métriques JVM (mémoire, CPU, etc.)
+
+### Lancement
+
+Démarrer l'application (les métriques sont exposées automatiquement sur le port 1234) :
+
+```bash
+java -cp target/classes net.youssouf.WeatherAnalyzerApp
+```
+
+Vérifier les métriques : http://localhost:1234/metrics
+
+### Démarrage du Cluster Monitoring
+
+Dans `cluster-prometheus/` :
+
+```bash
+docker login  # Si nécessaire pour éviter les erreurs d'authentification
+docker-compose up -d
+```
+
+Vérifier les conteneurs :
+
+```bash
+docker ps
+```
+
+📷 *Capture : Cluster Prometheus & Grafana*
+![Cluster Monitoring](/captures/img_7.png)
+
+### Accès aux Interfaces
+
+* Prometheus : http://localhost:9090
+* Grafana : http://localhost:3000 (login: admin/admin)
+
+📷 *Capture : Interface Prometheus*
+![Prometheus](/captures/img_8.png)
+
+📷 *Capture : Interface Gafana*
+![Grafana](/captures/img_8_1.png)
+
+### Configuration Grafana
+
+1. Ajouter Prometheus comme source de données (URL: http://prometheus:9090)
+2. Créer un dashboard avec les métriques suivantes :
+   - Nombre de messages traités
+   - Taux de messages filtrés
+   - Latence Kafka Streams
+   - Throughput (records/sec)
+   - Memory / CPU usage
+
+📷 *Capture : Dashboard Grafana*
+![Dashboard Grafana](/captures/img_8_1.png)
+
+### Test
+
+Envoyer des données météo et observer les métriques en temps réel dans Grafana.
+
+les metrics depuis http://localhost:1234/metrics
+
+![Metrics](/captures/img_9.png)
+
+La capture suivante est celui du test de certaines query prometheus
+
+![Prometheus_query](/captures/img_10.png)
+![Prometheus_query](/captures/img_11.png)
+
+La capture de configuration de promethus comme datasource dans grafana
+![Prometheus_query](/captures/img_12.png)
+
+Capture dashboard grafana des différents metrics
+![Grafana_visualisation](/captures/img_13.png)
+
+
+
+
+
 
 ---
 
@@ -243,26 +373,59 @@ Station2 : Température Moyenne = 37.5°F | Humidité Moyenne = 47.5%
 
 ## 🎯 Objectif
 
-Créer une mini-application Web/REST avec :
-
-* Un bouton qui envoie un “clic”
-* Kafka Streams qui compte les clics en temps réel
-* Une API REST qui expose les compteurs
+Développer une solution complète basée sur Kafka Streams et Spring Boot pour suivre et analyser les clics des utilisateurs en temps réel.
 
 ## 🔧 Architecture
 
-* **Frontend** → Envoie des clics
-* **Kafka Producer** → topic `click-events`
-* **Kafka Streams** → comptage `KTable`
-* **Topic output** : `click-counts`
-* **API REST Spring Boot** → expose `/stats`
+* **Producteur Web** : Application Spring Boot avec interface web contenant un bouton "Cliquez ici" qui envoie des messages à Kafka.
+* **Application Kafka Streams** : Consomme les messages du topic `clicks`, compte les clics par utilisateur, produit vers `click-counts`.
+* **Consommateur REST** : Application Spring Boot qui consomme `click-counts` et expose une API REST GET `/clicks/count`.
 
-## 📌 Fonctionnalités à implémenter
+## 📌 Implémentation
 
-* Flux temps réel Kafka Streams
-* State Store (RocksDB)
-* REST Controller Spring
-* Web interface simple (optionnel)
+Trois applications séparées :
+
+* `ClickProducerApp.java` : Producteur web Spring Boot
+* `ClickStreamsApp.java` : Application Kafka Streams pour le comptage
+* `ClickConsumerApp.java` : Consommateur REST Spring Boot
+
+### Lancement
+
+Lancer les trois applications séparément :
+
+```bash
+# Producteur (port 8080)
+java -cp target/classes net.youssouf.ClickProducerApp
+
+# Streams
+java -cp target/classes net.youssouf.ClickStreamsApp
+
+# Consommateur (port 8081)
+java -cp target/classes -Dserver.port=8081 net.youssouf.ClickConsumerApp
+```
+
+### Création des topics
+
+```bash
+./kafka-topics.sh --create --topic clicks --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+./kafka-topics.sh --create --topic click-counts --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+```
+
+📷 *Capture : Interface web*
+![Interface Web](/captures/img_7.png)
+
+### Test
+
+Accéder à http://localhost:8080, cliquer sur le bouton.
+
+Récupérer le compteur :
+
+```bash
+curl http://localhost:8081/clicks/count
+```
+
+📷 *Capture : Comptage en temps réel*
+![Comptage](/captures/img_8.png)
 
 ---
 
@@ -302,19 +465,10 @@ java -jar target/<nom-app>.jar
 
 ---
 
-# 🎉 Conclusion
+#  Conclusion
 
 Ce TP permet de manipuler Kafka & Kafka Streams dans des scénarios variés :
 ✔ Nettoyage de texte
 ✔ Traitement météorologique
 ✔ Temps réel + API Spring Boot
 
-Tu peux maintenant compléter ton dépôt GitHub avec un README clair, professionnel, parfaitement structuré pour un projet académique ou portfolio.
-
----
-
-Si tu veux :
-✅ Générer un PDF propre avec ce README
-✅ Ajouter des badges GitHub
-✅ Ajouter une architecture en diagrammes
-Je peux aussi te les préparer.

@@ -1,0 +1,20 @@
+startDelaySeconds: 0
+ssl: false
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+rules:
+  # Kafka Streams metrics
+  - pattern: kafka\.streams\.(.+)<type=(.+), (.+)=(.+)><>Value
+    name: kafka_streams_$1_$2
+    labels:
+      "$3": "$4"
+  - pattern: kafka\.streams\.(.+)<type=(.+)><>Value
+    name: kafka_streams_$1_$2
+  - pattern: kafka\.streams\.(.+)<>(.+)
+    name: kafka_streams_$1_$2
+  # JVM metrics
+  - pattern: java\.lang<type=(.+), name=(.+)><>(.+)
+    name: jvm_$1_$2_$3
+  - pattern: java\.lang<type=(.+), name=(.+)><>(\w+)
+    name: jvm_$1_$2_$3
