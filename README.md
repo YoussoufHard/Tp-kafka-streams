@@ -14,7 +14,33 @@ Ce projet regroupe 3 exercices complets permettant de maîtriser Kafka et Kafka 
 2. Analyse de Données Météorologiques
 3. Application Spring Boot + Kafka Streams — Compteur de Clics
 
-Ce dépôt inclut également la configuration Kafka via Docker afin de faciliter l’exécution des exercices.
+Ce dépôt inclut également la configuration Kafka via Docker afin de faciliter l'exécution des exercices.
+
+---
+
+# Téléchargement et Installation
+
+## Clonage du Repository
+
+```bash
+git clone https://github.com/YoussoufHard/Tp-kafka-streams.git
+cd Tp-kafka-streams
+```
+
+## Structure du Projet
+
+```
+Tp-kafka-streams/
+│
+├── ClickProducerApp/     # Application Producteur Web (Exercice 3)
+├── ClickStreamsApp/      # Application Kafka Streams (Exercice 3)
+├── ClickConsumerApp/     # Application Consommateur REST (Exercice 3)
+├── cluster-prometheus/   # Configuration Monitoring
+├── src/                  # Applications Exercice 1 & 2
+├── captures/             # Captures d'écran
+├── docker-compose.yml    # Configuration Kafka
+└── README.md
+```
 
 ---
 
@@ -136,11 +162,12 @@ Elle :
 * applique les règles métier
 * redirige vers les bons topics
 
-### Lancer l'application :
+### Téléchargement et Lancement
 
 ```bash
+# Depuis le répertoire racine du projet
 mvn clean package
-java -jar target/kafka-text-cleaner.jar
+java -cp target/classes net.youssouf.TextCleanerApp
 ```
 
 *Capture : démarrage de l'application*
@@ -222,9 +249,10 @@ Il utilise Kafka Streams pour :
 * Grouper par station et calculer moyennes
 * Publier vers `station-averages`
 
-### Lancement
+### Téléchargement et Lancement
 
 ```bash
+# Depuis le répertoire racine du projet
 mvn clean package
 java -cp target/classes net.youssouf.WeatherAnalyzerApp
 ```
@@ -411,7 +439,7 @@ exo3-click-counter/
     └── src/main/resources/application.properties
 ```
 
-### Lancement
+### Téléchargement et Lancement
 
 Lancer les trois applications séparément :
 
